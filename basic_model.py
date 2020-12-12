@@ -13,7 +13,7 @@ from params import num_history_points
 
 CSV_DATA_PATH: str = "/media/dorel/DATA/work/stock-trading-ml/data/msft_daily.csv"
 
-ohlcv_histories, _, next_day_open_values, unscaled_y, y_normaliser = csv_to_dataset(CSV_DATA_PATH)
+ohlcv_histories, _, next_day_open_values, unscaled_y, y_normaliser = csv_to_dataset(CSV_DATA_PATH, )
 
 test_split = 0.9
 n = int(ohlcv_histories.shape[0] * test_split)

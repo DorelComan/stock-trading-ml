@@ -2,13 +2,13 @@ import pandas as pd
 from sklearn import preprocessing
 import numpy as np
 
-from params import num_history_points
 
-
-def csv_to_dataset(csv_path):
+def csv_to_dataset(csv_path: str, num_history_points: int = 50):
     """
 
-    :param csv_path:
+    csv_path:
+    num_history_points:
+
     :return:
     """
 

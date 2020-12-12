@@ -1,16 +1,23 @@
+from dataclasses import dataclass
 from pathlib import Path
 
-# DATA
-num_history_points: int = 50
-train_split = 0.9
-val_split_out_of_train = 0.1
+from dataclasses_json import dataclass_json
 
 
-# TRAIN
-EPOCHS: int = 100
-BATCH_SIZE: int = 64
+@dataclass_json
+@dataclass
+class Parameters:
 
-LR: float = 0.0001
+    # DATA
+    num_history_points: int = 50
+    train_split = 0.9
+    val_split_out_of_train = 0.1
 
-CSV_DATA_PATH: str = "/media/dorel/DATA/work/stock-trading-ml/data/msft_daily.csv"
-SAVE_MODEL_PATH = Path("/media/dorel/DATA/work/stock-trading-ml/experiments/2020_12_12_002/")
+    # TRAIN
+    EPOCHS: int = 100
+    BATCH_SIZE: int = 64
+
+    LR: float = 0.0001
+
+    CSV_DATA_PATH: str = "/media/dorel/DATA/work/stock-trading-ml/data/msft_daily.csv"
+    SAVE_MODEL_PATH = Path("/media/dorel/DATA/work/stock-trading-ml/experiments/2020_12_12_002/")

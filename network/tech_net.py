@@ -5,10 +5,10 @@ import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Dropout, LSTM, Input, Activation, concatenate
 
-from params import num_history_points
+from params import Parameters
 
 
-def tech_net(input_shape: List[int]) -> tf.keras.models.Model:
+def tech_net(input_shape: List[int], params: Parameters) -> tf.keras.models.Model:
     """LSTM Tech model architecture
 
     Attrs:
@@ -19,7 +19,7 @@ def tech_net(input_shape: List[int]) -> tf.keras.models.Model:
     """
 
     # define two sets of inputs
-    lstm_input = Input(shape=(num_history_points, 5), name='lstm_input')
+    lstm_input = Input(shape=(params.num_history_points, 5), name='lstm_input')
     dense_input = Input(shape=input_shape, name='tech_input')
 
     # the first branch operates on the first input

@@ -13,22 +13,22 @@ from tensorflow import set_random_seed
 
 
 from util import csv_to_dataset
-from params import CSV_DATA_PATH, SAVE_MODEL_PATH, BATCH_SIZE, EPOCHS, LR, train_split, val_split_out_of_train
+from params import Parameters
 import matplotlib.pyplot as plt
 
 np.random.seed(4)
 set_random_seed(4)
 
 
-def get_best_model_path() -> str:
-    checkpoint_path = SAVE_MODEL_PATH / "best_model.h5"
+def get_best_model_path(params) -> str:
+    checkpoint_path = params.SAVE_MODEL_PATH / "best_model.h5"
 
     return checkpoint_path.as_posix()
 
 
-def evaluate(ohlcv_test, tech_ind_test, unscaled_y_test, y_normaliser):
+def evaluate(params, ohlcv_test, tech_ind_test, unscaled_y_test, y_normaliser):
 
-    model = tf.keras.models.load_model(get_best_model_path())
+    model = tf.keras.models.load_model(get_best_model_path(params))
 
     # evaluation
     y_test_predicted = model.predict([ohlcv_test, tech_ind_test])
@@ -55,17 +55,28 @@ def evaluate(ohlcv_test, tech_ind_test, unscaled_y_test, y_normaliser):
 
 
 def main():
-    # dataset
+    """
 
-    if not SAVE_MODEL_PATH.exists():
-        SAVE_MODEL_PATH.mkdir()
+    :return:
+    """
+
+    params = Parameters()
+
+    print("Write params in JSON")
+    json_string = Parameters().to_json()
+    params_path = params.SAVE_MODEL_PATH / "params.json"
+    with open(params_path.as_posix(), "w") as f:
+        f.write(json_string)
+
+    if not params.SAVE_MODEL_PATH.exists():
+        params.SAVE_MODEL_PATH.mkdir()
 
     ohlcv_histories, technical_indicators, next_day_open_values, unscaled_y, y_normaliser = csv_to_dataset(
-        CSV_DATA_PATH)
+        params.CSV_DATA_PATH, params.num_history_points)
 
     print("----", ohlcv_histories.shape, technical_indicators.shape, next_day_open_values.shape)
 
-    n = int(ohlcv_histories.shape[0] * train_split)
+    n = int(ohlcv_histories.shape[0] * params.train_split)
 
     ohlcv_train = ohlcv_histories[:n]
     tech_ind_train = technical_indicators[:n]
@@ -80,22 +91,22 @@ def main():
     print("test split", ohlcv_test.shape)
 
     callbacks: List[tf.keras.callbacks.Callback] = [
-        tf.keras.callbacks.TensorBoard(SAVE_MODEL_PATH.as_posix()),
+        tf.keras.callbacks.TensorBoard(params.SAVE_MODEL_PATH.as_posix()),
         tf.keras.callbacks.ModelCheckpoint(
-            get_best_model_path(), monitor='val_loss', verbose=1, save_best_only=True,
+            get_best_model_path(params), monitor='val_loss', verbose=1, save_best_only=True,
         )
     ]
 
-    model = tech_net(technical_indicators.shape[1:])
+    model = tech_net(technical_indicators.shape[1:], params)
 
-    adam = optimizers.Adam(lr=LR)
+    adam = optimizers.Adam(lr=params.LR)
     model.compile(optimizer=adam, loss='mse')
 
-    model.fit(x=[ohlcv_train, tech_ind_train], y=y_true_train, batch_size=BATCH_SIZE, epochs=EPOCHS, shuffle=True,
-              validation_split=val_split_out_of_train,
+    model.fit(x=[ohlcv_train, tech_ind_train], y=y_true_train, batch_size=params.BATCH_SIZE, epochs=params.EPOCHS,
+              shuffle=True, validation_split=params.val_split_out_of_train,
               callbacks=callbacks)
 
-    evaluate(ohlcv_test, tech_ind_test, unscaled_y_test, y_normaliser)
+    evaluate(params, ohlcv_test, tech_ind_test, unscaled_y_test, y_normaliser)
 
 
 if __name__ == "__main__":
