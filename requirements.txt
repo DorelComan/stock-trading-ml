@@ -3,5 +3,5 @@ pandas
 numpy
 sklearn
 keras
-tensorflow
+tensorflow-gpu==1.15
 matplotlib

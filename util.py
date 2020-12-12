@@ -2,25 +2,38 @@ import pandas as pd
 from sklearn import preprocessing
 import numpy as np
 
-history_points = 50
+from params import num_history_points
 
 
 def csv_to_dataset(csv_path):
-    data = pd.read_csv(csv_path)
-    data = data.drop('date', axis=1)
-    data = data.drop(0, axis=0)
+    """
 
+    :param csv_path:
+    :return:
+    """
+
+    data = pd.read_csv(csv_path)
+    # Drop the date
+    data = data.drop('date', axis=1)
+    # Drop the titles
+    data = data.drop(0, axis=0)
     data = data.values
 
-    data_normaliser = preprocessing.MinMaxScaler()
+    # COLUMNS [open, high, low, close, volume]
+    data_normaliser = preprocessing.MinMaxScaler(feature_range=(0, 1))
     data_normalised = data_normaliser.fit_transform(data)
 
     # using the last {history_points} open close high low volume data points, predict the next open value
-    ohlcv_histories_normalised = np.array([data_normalised[i:i + history_points].copy() for i in range(len(data_normalised) - history_points)])
-    next_day_open_values_normalised = np.array([data_normalised[:, 0][i + history_points].copy() for i in range(len(data_normalised) - history_points)])
-    next_day_open_values_normalised = np.expand_dims(next_day_open_values_normalised, -1)
+    # SHAPE: [N, num_history_points, 5]
+    ohlcv_histories_normalised = np.array([data_normalised[i:i + num_history_points].copy()
+                                           for i in range(len(data_normalised) - num_history_points)])
 
-    next_day_open_values = np.array([data[:, 0][i + history_points].copy() for i in range(len(data) - history_points)])
+    next_day_open_values_normalised = np.array([data_normalised[:, 0][i + num_history_points].copy()
+                                                for i in range(len(data_normalised) - num_history_points)])
+    next_day_open_values_normalised = np.expand_dims(next_day_open_values_normalised, axis=-1)
+
+    next_day_open_values = np.array([data[:, 0][i + num_history_points].copy()
+                                     for i in range(len(data) - num_history_points)])
     next_day_open_values = np.expand_dims(next_day_open_values, -1)
 
     y_normaliser = preprocessing.MinMaxScaler()
@@ -49,8 +62,11 @@ def csv_to_dataset(csv_path):
     tech_ind_scaler = preprocessing.MinMaxScaler()
     technical_indicators_normalised = tech_ind_scaler.fit_transform(technical_indicators)
 
-    assert ohlcv_histories_normalised.shape[0] == next_day_open_values_normalised.shape[0] == technical_indicators_normalised.shape[0]
-    return ohlcv_histories_normalised, technical_indicators_normalised, next_day_open_values_normalised, next_day_open_values, y_normaliser
+    assert ohlcv_histories_normalised.shape[0] == next_day_open_values_normalised.shape[0] \
+           == technical_indicators_normalised.shape[0]
+
+    return ohlcv_histories_normalised, technical_indicators_normalised, next_day_open_values_normalised,\
+           next_day_open_values, y_normaliser
 
 
 def multiple_csv_to_dataset(test_set_name):

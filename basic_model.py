@@ -6,12 +6,14 @@ import numpy as np
 np.random.seed(4)
 from tensorflow import set_random_seed
 set_random_seed(4)
-from util import csv_to_dataset, history_points
-
+from util import csv_to_dataset
+from params import num_history_points
 
 # dataset
 
-ohlcv_histories, _, next_day_open_values, unscaled_y, y_normaliser = csv_to_dataset('MSFT_daily.csv')
+CSV_DATA_PATH: str = "/media/dorel/DATA/work/stock-trading-ml/data/msft_daily.csv"
+
+ohlcv_histories, _, next_day_open_values, unscaled_y, y_normaliser = csv_to_dataset(CSV_DATA_PATH)
 
 test_split = 0.9
 n = int(ohlcv_histories.shape[0] * test_split)
@@ -30,7 +32,7 @@ print(ohlcv_test.shape)
 
 # model architecture
 
-lstm_input = Input(shape=(history_points, 5), name='lstm_input')
+lstm_input = Input(shape=(num_history_points, 5), name='lstm_input')
 x = LSTM(50, name='lstm_0')(lstm_input)
 x = Dropout(0.2, name='lstm_dropout_0')(x)
 x = Dense(64, name='dense_0')(x)
