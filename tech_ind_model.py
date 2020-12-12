@@ -1,18 +1,15 @@
 import os
-
-from network.tech_net import tech_net
-
 os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 
+from sklearn.preprocessing import MinMaxScaler
 from typing import List
 import tensorflow as tf
-from tensorflow.keras import optimizers
 import numpy as np
 
 from tensorflow import set_random_seed
 
 
-from util import csv_to_dataset
+from util import csv_to_dataset, get_best_model_path
 from params import Parameters
 import matplotlib.pyplot as plt
 
@@ -20,33 +17,37 @@ np.random.seed(4)
 set_random_seed(4)
 
 
-def get_best_model_path(params) -> str:
-    checkpoint_path = params.SAVE_MODEL_PATH / "best_model.h5"
+def evaluate(params, ohlcv_test, tech_ind_test, unscaled_y_test, y_normaliser: MinMaxScaler) -> None:
+    """Evaluate model and give MSE + chart.
 
-    return checkpoint_path.as_posix()
+    Attrs:
+        params:
+        ohlcv_test:
+        tech_ind_test:
+        unscaled_y_test:
+        y_normaliser:
 
+    """
+    model = tf.keras.models.load_model(get_best_model_path(params), compile=True)
 
-def evaluate(params, ohlcv_test, tech_ind_test, unscaled_y_test, y_normaliser):
-
-    model = tf.keras.models.load_model(get_best_model_path(params))
-
-    # evaluation
     y_test_predicted = model.predict([ohlcv_test, tech_ind_test])
     y_test_predicted = y_normaliser.inverse_transform(y_test_predicted)
-    # y_predicted = model.predict([ohlcv_histories, technical_indicators])
-    # y_predicted = y_normaliser.inverse_transform(y_predicted)
 
+    # Compute MSE
     assert unscaled_y_test.shape == y_test_predicted.shape
     real_mse = np.mean(np.square(unscaled_y_test - y_test_predicted))
     scaled_mse = real_mse / (np.max(unscaled_y_test) - np.min(unscaled_y_test)) * 100
-    print(scaled_mse)
+    print("Scaled MSE: ", scaled_mse)
 
+    # Chart predictions
     plt.gcf().set_size_inches(22, 15, forward=True)
     start = 0
     end = -1
     real = plt.plot(unscaled_y_test[start:end], label='real')
     pred = plt.plot(y_test_predicted[start:end], label='predicted')
 
+    # y_predicted = model.predict([ohlcv_histories, technical_indicators])
+    # y_predicted = y_normaliser.inverse_transform(y_predicted)
     # real = plt.plot(unscaled_y[start:end], label='real')
     # pred = plt.plot(y_predicted[start:end], label='predicted')
 
@@ -61,15 +62,14 @@ def main():
     """
 
     params = Parameters()
+    if not params.SAVE_MODEL_PATH.exists():
+        params.SAVE_MODEL_PATH.mkdir()
 
     print("Write params in JSON")
     json_string = Parameters().to_json()
     params_path = params.SAVE_MODEL_PATH / "params.json"
     with open(params_path.as_posix(), "w") as f:
         f.write(json_string)
-
-    if not params.SAVE_MODEL_PATH.exists():
-        params.SAVE_MODEL_PATH.mkdir()
 
     ohlcv_histories, technical_indicators, next_day_open_values, unscaled_y, y_normaliser = csv_to_dataset(
         params.CSV_DATA_PATH, params.num_history_points)
@@ -97,14 +97,14 @@ def main():
         )
     ]
 
-    model = tech_net(technical_indicators.shape[1:], params)
-
-    adam = optimizers.Adam(lr=params.LR)
-    model.compile(optimizer=adam, loss='mse')
-
-    model.fit(x=[ohlcv_train, tech_ind_train], y=y_true_train, batch_size=params.BATCH_SIZE, epochs=params.EPOCHS,
-              shuffle=True, validation_split=params.val_split_out_of_train,
-              callbacks=callbacks)
+    # model = tech_net(technical_indicators.shape[1:], params)
+    #
+    # adam = optimizers.Adam(lr=params.LR)
+    # model.compile(optimizer=adam, loss='mse')
+    #
+    # model.fit(x=[ohlcv_train, tech_ind_train], y=y_true_train, batch_size=params.BATCH_SIZE, epochs=params.EPOCHS,
+    #           shuffle=True, validation_split=params.val_split_out_of_train,
+    #           callbacks=callbacks)
 
     evaluate(params, ohlcv_test, tech_ind_test, unscaled_y_test, y_normaliser)
 

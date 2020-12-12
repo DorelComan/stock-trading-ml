@@ -1,6 +1,9 @@
 import pandas as pd
 from sklearn import preprocessing
 import numpy as np
+import os
+
+from params import Parameters
 
 
 def csv_to_dataset(csv_path: str, num_history_points: int = 50):
@@ -53,24 +56,32 @@ def csv_to_dataset(csv_path: str, num_history_points: int = 50):
     for his in ohlcv_histories_normalised:
         # note since we are using his[3] we are taking the SMA of the closing price
         sma = np.mean(his[:, 3])
-        macd = calc_ema(his, 12) - calc_ema(his, 26)
         technical_indicators.append(np.array([sma]))
-        # technical_indicators.append(np.array([sma,macd,]))
+        # TODO: check if second tech indicator helps
+        # macd = calc_ema(his, 12) - calc_ema(his, 26)
+        # technical_indicators.append(np.array([sma, macd,]))
 
     technical_indicators = np.array(technical_indicators)
 
     tech_ind_scaler = preprocessing.MinMaxScaler()
     technical_indicators_normalised = tech_ind_scaler.fit_transform(technical_indicators)
 
+    # check that input and output number of examples is the same
     assert ohlcv_histories_normalised.shape[0] == next_day_open_values_normalised.shape[0] \
            == technical_indicators_normalised.shape[0]
 
-    return ohlcv_histories_normalised, technical_indicators_normalised, next_day_open_values_normalised,\
-           next_day_open_values, y_normaliser
+    # Ground Truth, in range [0, 1]
+    y_true = next_day_open_values_normalised
+
+    return ohlcv_histories_normalised, technical_indicators_normalised, y_true, next_day_open_values, y_normaliser
 
 
 def multiple_csv_to_dataset(test_set_name):
-    import os
+    """
+
+    :param test_set_name:
+    :return:
+    """
     ohlcv_histories = 0
     technical_indicators = 0
     next_day_open_values = 0
@@ -87,8 +98,16 @@ def multiple_csv_to_dataset(test_set_name):
 
     ohlcv_train = ohlcv_histories
     tech_ind_train = technical_indicators
-    y_train = next_day_open_values
+
+    # Ground Truth
+    y_true = next_day_open_values
 
     ohlcv_test, tech_ind_test, y_test, unscaled_y_test, y_normaliser = csv_to_dataset(test_set_name)
 
-    return ohlcv_train, tech_ind_train, y_train, ohlcv_test, tech_ind_test, y_test, unscaled_y_test, y_normaliser
+    return ohlcv_train, tech_ind_train, y_true, ohlcv_test, tech_ind_test, y_test, unscaled_y_test, y_normaliser
+
+
+def get_best_model_path(params: Parameters) -> str:
+    checkpoint_path = params.SAVE_MODEL_PATH / "best_model.h5"
+
+    return checkpoint_path.as_posix()
